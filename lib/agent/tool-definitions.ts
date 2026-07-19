@@ -9,7 +9,7 @@ const descriptions: Record<SchedulingToolName, string> = {
   move_task:
     "Move one movable flexible task to a new start time without changing its duration. taskId must come from currentSchedule.flexibleTasks, never fixedMeetingIds.",
   split_task:
-    "Replace one splittable flexible task with two or more non-overlapping blocks whose durations exactly equal the original duration. taskId must never identify a meeting.",
+    "Replace one splittable flexible task with two or more non-overlapping blocks whose durations exactly equal the original duration. Every block must meet minimumDuration, so the task duration must be at least twice minimumDuration. taskId must never identify a meeting.",
   shorten_task:
     "Shorten one eligible flexible task without going below its minimum duration. taskId must never identify a meeting.",
   defer_task:
@@ -33,9 +33,9 @@ const parameters: Record<SchedulingToolName, Record<string, unknown>> = {
     type: "object",
     properties: {
       duration: { type: "integer", minimum: 1 },
-      before: { type: ["integer", "null"], minimum: 0, maximum: 1440 },
+      before: { type: "integer", minimum: 0, maximum: 1440 },
     },
-    required: ["duration", "before"],
+    required: ["duration"],
     additionalProperties: false,
   },
   move_task: {

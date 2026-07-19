@@ -125,6 +125,7 @@ export type SchedulingToolName =
 export type ToolErrorCode =
   | "INVALID_INPUT"
   | "TASK_NOT_FOUND"
+  | "FIXED_MEETING"
   | "TASK_IMMOVABLE"
   | "TASK_UNSPLITTABLE"
   | "TASK_NOT_SHORTENABLE"

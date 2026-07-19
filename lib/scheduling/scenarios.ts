@@ -15,6 +15,7 @@ function task(
     canDefer: boolean;
   }> = {},
 ) {
+  const minimumDuration = options.minimumDuration ?? 30;
   return {
     kind: "task" as const,
     id,
@@ -23,11 +24,11 @@ function task(
     start,
     end: start + duration,
     duration,
-    minimumDuration: options.minimumDuration ?? 30,
+    minimumDuration,
     priority: options.priority ?? "medium",
     deadline: options.deadline ?? 17 * 60,
     canMove: options.canMove ?? true,
-    canSplit: options.canSplit ?? true,
+    canSplit: options.canSplit ?? duration >= minimumDuration * 2,
     canShorten: options.canShorten ?? false,
     canDefer: options.canDefer ?? true,
   };

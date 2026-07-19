@@ -14,7 +14,7 @@ export const schedulingToolSchemas = {
   find_available_slots: z
     .object({
       duration: z.number().int().positive(),
-      before: z.number().int().min(0).max(1440).nullish(),
+      before: z.number().int().min(0).max(1440).optional(),
     })
     .strict(),
   move_task: z
@@ -106,7 +106,7 @@ function taskSelectionRejection(
     return {
       ...reject(
         tool,
-        "TASK_IMMOVABLE",
+        "FIXED_MEETING",
         `${selected.title} is a fixed meeting and cannot be changed. Select the flexible task on the other side of the conflict.`,
       ),
       data: { selectedItemKind: "meeting", movableTaskIds },
@@ -174,7 +174,7 @@ export function executeTool(
 
   if (name === "find_available_slots") {
     const input = schedulingToolSchemas.find_available_slots.parse(rawInput);
-    const slots = findFreeSlots(schedule, input.duration, input.before ?? undefined);
+    const slots = findFreeSlots(schedule, input.duration, input.before);
     return success(
       name,
       `Found ${slots.length} available slot${slots.length === 1 ? "" : "s"}.`,
@@ -255,6 +255,8 @@ export function executeTool(
       duration: input.duration,
       end: task.start + input.duration,
     };
+    shortened.canSplit =
+      task.canSplit && input.duration >= task.minimumDuration * 2;
     return success(
       name,
       `Shortened ${task.title} to ${input.duration} minutes.`,
@@ -319,6 +321,13 @@ export function executeTool(
   if (!task) return taskSelectionRejection(name, schedule, input.taskId);
   if (!task.canSplit)
     return reject(name, "TASK_UNSPLITTABLE", `${task.title} cannot be split.`);
+  if (task.duration < task.minimumDuration * 2) {
+    return reject(
+      name,
+      "TASK_UNSPLITTABLE",
+      `${task.title} is too short to split into two blocks of at least ${task.minimumDuration} minutes.`,
+    );
+  }
   const total = input.blocks.reduce((sum, block) => sum + block.duration, 0);
   if (
     total !== task.duration ||

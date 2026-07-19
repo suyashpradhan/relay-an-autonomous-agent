@@ -82,8 +82,12 @@ function conciseSchedule(schedule: DaySchedule): unknown {
         taskId: item.taskId,
         title: item.title,
         canMove: item.canMove,
+        canSplit: item.canSplit,
+        canShorten: item.canShorten,
+        canDefer: item.canDefer,
         deadline: item.deadline,
         duration: item.duration,
+        minimumDuration: item.minimumDuration,
       })),
   };
 }
@@ -165,6 +169,7 @@ Rules:
 - Fixed meetings are immutable. IDs beginning with "google-" identify imported fixed meetings, never tasks.
 - For move_task, split_task, shorten_task, and defer_task, use only a taskId listed in CURRENT_SCHEDULE.flexibleTasks. Never use an item ID from CURRENT_SCHEDULE.fixedMeetingIds.
 - When an overlap contains one meeting and one task, change the task side of the overlap.
+- Use split_task only when canSplit is true and duration is at least twice minimumDuration.
 - If a tool returns FIXED_MEETING or TASK_NOT_FOUND, use data.movableTaskIds to select a valid flexible task next.
 - Protect critical and high-priority hard-deadline tasks. Prefer moving/splitting/shortening lower-value work before deferring important work.
 - Respect working hours and task deadlines. Insert a 30-minute lunch between 12:00 and 14:00 when possible.
@@ -185,6 +190,61 @@ function extractSummary(response: OpenAIResponse): string {
     if (text) return text;
   }
   return "Selected the next deterministic scheduling action.";
+}
+
+function forcedRecoveryTool(context: AgentDecisionContext): SchedulingToolName {
+  const validation = validateSchedule(context.workingSchedule);
+  if (validation.valid) return "validate_schedule";
+
+  const moves = recommendedMoves(context.workingSchedule);
+  if (moves.some((move) => move.earliestValidStart !== undefined)) {
+    return "move_task";
+  }
+
+  const activeTasks = context.workingSchedule.items.filter(
+    (item): item is ScheduledTaskBlock =>
+      item.kind === "task" && !item.deferred,
+  );
+  const overlappingIds = new Set(
+    analyzeSchedule(context.workingSchedule).overlaps.flatMap(
+      (issue) => issue.itemIds,
+    ),
+  );
+  const overlappingTasks = activeTasks.filter(
+    (task) => overlappingIds.has(task.id) || overlappingIds.has(task.taskId),
+  );
+
+  if (
+    overlappingTasks.some(
+      (task) => task.canShorten && task.duration > task.minimumDuration,
+    )
+  ) {
+    return "shorten_task";
+  }
+  if (
+    overlappingTasks.some(
+      (task) => task.canSplit && task.duration >= task.minimumDuration * 2,
+    )
+  ) {
+    return "split_task";
+  }
+  if (overlappingTasks.some((task) => task.canDefer)) {
+    return "defer_task";
+  }
+  if (validation.overloadedMinutes > 0) {
+    if (
+      activeTasks.some(
+        (task) => task.canShorten && task.duration > task.minimumDuration,
+      )
+    ) {
+      return "shorten_task";
+    }
+    if (activeTasks.some((task) => task.canDefer)) return "defer_task";
+  }
+  if (validation.softIssues.some((issue) => issue.code === "MISSING_LUNCH")) {
+    return "insert_break";
+  }
+  return "find_available_slots";
 }
 
 async function requestModelDecision(
@@ -211,6 +271,7 @@ async function requestModelDecision(
 
   let payload: OpenAIResponse | undefined;
   let call: ModelFunctionCall | undefined;
+  const recoveryTool = forcedRecoveryTool(context);
   for (let requestAttempt = 0; requestAttempt < 2; requestAttempt += 1) {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -226,7 +287,10 @@ async function requestModelDecision(
             ? prompt
             : `${prompt}\nThe previous response omitted the required function call. Return exactly one scheduling tool call now.`,
         tools: agentToolDefinitions,
-        tool_choice: "required",
+        tool_choice:
+          requestAttempt === 0
+            ? "required"
+            : { type: "function", name: recoveryTool },
         parallel_tool_calls: false,
         max_output_tokens: 900,
       }),
