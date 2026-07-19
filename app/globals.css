@@ -1674,6 +1674,46 @@ textarea {
   color: var(--muted);
   font-size: 12px;
 }
+.pp-connect > div:has(> article:only-child) {
+  grid-template-columns: minmax(320px, 620px);
+}
+.pp-connect-date,
+.pp-connect-message,
+.pp-connect article > small {
+  grid-column: 1/-1;
+}
+.pp-connect-date {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.pp-connect-date input {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d9dde4;
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+}
+.pp-connect-message {
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #eaf1fe;
+  color: #2b4fa3;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.pp-connect-message.error {
+  background: #fbe9ea;
+  color: #8a323a;
+}
+.pp-connect article > small {
+  color: var(--faint);
+  font-size: 9px;
+}
 
 @media (max-width: 1180px) {
   .pp-review-grid {
@@ -1909,5 +1949,331 @@ textarea {
   }
   .pp-change-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Application chrome, Google Calendar import, and theme */
+html {
+  color-scheme: light;
+}
+.pp-shell {
+  display: flex;
+  flex-direction: column;
+}
+.pp-shell > main {
+  width: 100%;
+}
+.pp-header {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+.pp-theme-toggle {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.pp-theme-toggle:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 88%, var(--violet));
+}
+.pp-theme-sun {
+  display: none;
+}
+html[data-theme="dark"] .pp-theme-sun {
+  display: block;
+}
+html[data-theme="dark"] .pp-theme-moon {
+  display: none;
+}
+.pp-footer {
+  margin-top: auto;
+  padding: 22px 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.pp-footer b {
+  color: var(--ink);
+}
+.pp-footer span {
+  color: var(--violet);
+  font-weight: 800;
+}
+
+.pp-entry-card {
+  overflow: hidden;
+}
+.pp-entry-card h2,
+.pp-entry-card p {
+  overflow-wrap: anywhere;
+}
+
+.pp-connect {
+  width: 100%;
+  overflow: hidden;
+}
+.pp-connect > h1 {
+  max-width: 860px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.pp-connect > p {
+  max-width: 760px;
+  line-height: 1.6;
+}
+.pp-connect > div,
+.pp-connect > div:has(> article:only-child) {
+  display: block;
+  width: min(680px, 100%);
+  max-width: none;
+}
+.pp-connect article {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 28px;
+}
+.pp-connect-card-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.pp-connect-card-head > span:first-child {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #f1ebfe;
+  color: var(--violet);
+}
+.pp-connect-card-head h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.25;
+}
+.pp-connect-card-head small {
+  display: block;
+  margin-top: 4px;
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.pp-connect article > p {
+  grid-column: auto;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.pp-connect-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #f8f9fb;
+}
+.pp-connect-date {
+  min-width: 0;
+  color: var(--muted);
+}
+.pp-connect-date input {
+  width: 100%;
+  min-width: 0;
+  color-scheme: light;
+}
+.pp-connect-form .pp-button {
+  min-width: 210px;
+  white-space: nowrap;
+}
+.pp-connect-message {
+  margin: -4px 0 0;
+}
+.pp-connect-note {
+  display: flex;
+  gap: 8px;
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.55;
+}
+.pp-connect-note::before {
+  content: "✓";
+  flex: none;
+  color: var(--green);
+  font-weight: 800;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f4f6fa;
+  --muted: #adb5c3;
+  --faint: #858fa0;
+  --bg: #0d1016;
+  --surface: #151922;
+  --line: #2a303b;
+  --violet: #a78bfa;
+  --green: #57c78b;
+  --red: #f2777f;
+  --amber: #e7b851;
+  --blue: #79a7ff;
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .pp-root,
+html[data-theme="dark"] .pp-shell {
+  background: var(--bg);
+}
+html[data-theme="dark"] .pp-logo {
+  background: #f4f6fa;
+}
+html[data-theme="dark"] .pp-logo i {
+  border-color: rgba(13, 16, 22, 0.5);
+}
+html[data-theme="dark"] .pp-logo b {
+  background: #0d1016;
+}
+html[data-theme="dark"]
+  :is(
+    .pp-entry-card,
+    .pp-scenario-card,
+    .pp-builder-card,
+    .pp-builder-list,
+    .pp-card,
+    .pp-issues li,
+    .pp-review-actions,
+    .pp-agent-feed,
+    .pp-run-panel section,
+    .pp-result-schedule,
+    .pp-result-middle > section,
+    .pp-metric-strip article,
+    .pp-connect article,
+    .pp-replay > header,
+    .pp-replay-controls
+  ) {
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: none;
+}
+html[data-theme="dark"]
+  :is(
+    .pp-button-secondary,
+    .pp-button-danger,
+    .pp-cancel,
+    .pp-builder-card input,
+    .pp-builder-card select,
+    .pp-connect-date input,
+    .pp-replay-controls button,
+    .pp-replay-controls select
+  ) {
+  border-color: #343b48;
+  background: #191e28;
+  color: var(--ink);
+}
+html[data-theme="dark"] .pp-button-primary {
+  background: #7259d6;
+}
+html[data-theme="dark"] .pp-button-primary:hover:not(:disabled) {
+  background: #8069de;
+}
+html[data-theme="dark"] .pp-button-secondary:hover:not(:disabled),
+html[data-theme="dark"] .pp-button-ghost:hover {
+  background: #202632;
+}
+html[data-theme="dark"]
+  :is(
+    .pp-preview-strip,
+    .pp-builder-help,
+    .pp-observation,
+    .pp-run-panel section > p,
+    .pp-deferred span,
+    .pp-connect-form,
+    .pp-tool-details pre
+  ) {
+  border-color: var(--line);
+  background: #10141c;
+}
+html[data-theme="dark"]
+  :is(
+    .pp-builder-card header,
+    .pp-live-schedule > header div,
+    .pp-progress,
+    .pp-tags span,
+    .pp-chip-neutral
+  ) {
+  background: #202632;
+  color: var(--muted);
+}
+html[data-theme="dark"]
+  :is(
+    .pp-builder-card header button.active,
+    .pp-live-schedule > header button.active
+  ) {
+  background: #303746;
+  color: var(--ink);
+}
+html[data-theme="dark"] .pp-health > span {
+  background: var(--surface);
+}
+html[data-theme="dark"] .pp-hour i {
+  background: #252b36;
+}
+html[data-theme="dark"] .pp-schedule-block em,
+html[data-theme="dark"] .pp-conflict-zone span {
+  background: #171c25;
+}
+html[data-theme="dark"] .pp-agent-step.active > div {
+  border-color: #4f426f;
+  background: #1d1929;
+  box-shadow: 0 0 0 2px #292139;
+}
+html[data-theme="dark"] .pp-agent-step.rejected > div {
+  border-color: #61353a;
+  background: #241619;
+}
+html[data-theme="dark"] .pp-agent-step.rejected .pp-observation {
+  background: #351d21;
+  color: #f0a4aa;
+}
+html[data-theme="dark"] .pp-connect-card-head > span:first-child {
+  background: #292139;
+}
+html[data-theme="dark"] .pp-connect-date input {
+  color-scheme: dark;
+}
+html[data-theme="dark"] .pp-connect-message {
+  background: #152643;
+  color: #a8c4ff;
+}
+html[data-theme="dark"] .pp-connect-message.error {
+  background: #351d21;
+  color: #f0a4aa;
+}
+
+@media (max-width: 680px) {
+  .pp-connect-card-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .pp-connect-card-head > .pp-badge {
+    grid-column: 1 / -1;
+    margin-top: -4px;
+  }
+  .pp-connect-form {
+    grid-template-columns: 1fr;
+  }
+  .pp-connect-form .pp-button {
+    width: 100%;
+    min-width: 0;
   }
 }

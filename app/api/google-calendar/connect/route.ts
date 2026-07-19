@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  cleanEnvironmentValue,
   encryptCookie,
   GOOGLE_CALENDAR_READONLY_SCOPE,
   GOOGLE_OAUTH_STATE_COOKIE,
@@ -27,11 +28,16 @@ export async function GET(request: Request): Promise<Response> {
     );
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-  if (!clientId || !redirectUri || !process.env.GOOGLE_OAUTH_COOKIE_SECRET) {
+  const clientId = cleanEnvironmentValue("GOOGLE_CLIENT_ID");
+  const redirectUri = cleanEnvironmentValue("GOOGLE_REDIRECT_URI");
+  if (!clientId || !redirectUri) {
     return NextResponse.redirect(
       new URL("/?calendar=not_configured", request.url),
+    );
+  }
+  if (!clientId.endsWith(".apps.googleusercontent.com")) {
+    return NextResponse.redirect(
+      new URL("/?calendar=invalid_client", request.url),
     );
   }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  cleanEnvironmentValue,
   decryptCookie,
   encryptCookie,
   GOOGLE_OAUTH_STATE_COOKIE,
@@ -56,9 +57,9 @@ export async function GET(request: Request): Promise<Response> {
     return NextResponse.redirect(appRedirect(request, "failed"));
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const clientId = cleanEnvironmentValue("GOOGLE_CLIENT_ID");
+  const clientSecret = cleanEnvironmentValue("GOOGLE_CLIENT_SECRET");
+  const redirectUri = cleanEnvironmentValue("GOOGLE_REDIRECT_URI");
   if (!clientId || !clientSecret || !redirectUri) {
     return NextResponse.redirect(appRedirect(request, "not_configured"));
   }

@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   CalendarDays,
   Check,
-  Link2,
   ListPlus,
   Play,
   Sparkles,
@@ -15,6 +14,7 @@ import {
   RunStatusPanel,
 } from "../components/relay/agent-view";
 import {
+  AppFooter,
   AppHeader,
   Button,
   EmptyState,
@@ -159,10 +159,10 @@ function EntryScreen({ navigate }: { navigate: (screen: Screen) => void }) {
           onClick={() => navigate("manual")}
         />
         <EntryCard
-          icon={<Link2 size={21} />}
-          title="Connect My Tools"
-          copy="Calendar and task-app connections are planned for a future version."
-          action="See What’s Coming"
+          icon={<CalendarDays size={21} />}
+          title="Import Google Calendar"
+          copy="Bring in one day of timed meetings from your primary calendar. Relay only reads—Google events are never changed."
+          action="Choose a Day"
           onClick={() => navigate("connect")}
         />
       </div>
@@ -612,22 +612,39 @@ function ConnectScreen({
       </p>
       <div>
         <article>
-          <CalendarDays />
-          <h2>Google Calendar</h2>
-          <StatusBadge tone="green">Read only</StatusBadge>
+          <header className="pp-connect-card-head">
+            <span>
+              <CalendarDays />
+            </span>
+            <div>
+              <h2>Google Calendar</h2>
+              <small>Primary calendar · timed events only</small>
+            </div>
+            <StatusBadge tone="green">Read only</StatusBadge>
+          </header>
           <p>
             Choose a day, connect Google, and Relay will bring those events in
             as fixed meetings. You can then add flexible tasks before repairing
             the day.
           </p>
-          <label className="pp-connect-date">
-            Day to import
-            <input
-              type="date"
-              value={date}
-              onChange={(event) => onDate(event.target.value)}
-            />
-          </label>
+          <div className="pp-connect-form">
+            <label className="pp-connect-date">
+              <span>Day to import</span>
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => onDate(event.target.value)}
+              />
+            </label>
+            <Button
+              onClick={connectGoogleCalendar}
+              disabled={!date || status === "connecting"}
+            >
+              {status === "connecting"
+                ? "Importing Calendar…"
+                : "Connect Google Calendar"}
+            </Button>
+          </div>
           {message ? (
             <div
               className={`pp-connect-message ${status === "error" ? "error" : ""}`}
@@ -635,16 +652,8 @@ function ConnectScreen({
               {message}
             </div>
           ) : null}
-          <Button
-            onClick={connectGoogleCalendar}
-            disabled={!date || status === "connecting"}
-          >
-            {status === "connecting"
-              ? "Importing Calendar…"
-              : "Connect Google Calendar"}
-          </Button>
-          <small>
-            Only timed events are imported. All-day events are skipped.
+          <small className="pp-connect-note">
+            Relay never writes to Google Calendar. All-day events are skipped.
           </small>
         </article>
       </div>
@@ -854,6 +863,9 @@ export function RelayWorkspace() {
   const abortRef = useRef<AbortController | null>(null);
   const calendarHandledRef = useRef(false);
 
+  // OAuth returns through the URL after hydration, so this effect intentionally
+  // restores the matching UI state from that external browser state.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (calendarHandledRef.current) return;
     const query = new URLSearchParams(window.location.search);
@@ -876,6 +888,13 @@ export function RelayWorkspace() {
       setCalendarImportStatus("error");
       setCalendarMessage(
         "Google Calendar is not configured for this Relay environment yet.",
+      );
+      return;
+    }
+    if (calendar === "invalid_client") {
+      setCalendarImportStatus("error");
+      setCalendarMessage(
+        "The Google OAuth Client ID is invalid. Use a Web application Client ID ending in .apps.googleusercontent.com.",
       );
       return;
     }
@@ -926,6 +945,7 @@ export function RelayWorkspace() {
         setScreen("connect");
       });
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function goHome() {
     abortRef.current?.abort();
@@ -1102,11 +1122,9 @@ export function RelayWorkspace() {
   return (
     <div className="pp-root">
       <div className="pp-shell">
-        <AppHeader
-          active={screen === "replay" ? "runs" : "workspace"}
-          onHome={goHome}
-        />
+        <AppHeader onHome={goHome} />
         {content}
+        <AppFooter />
       </div>
     </div>
   );

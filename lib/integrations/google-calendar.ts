@@ -38,9 +38,22 @@ interface GoogleEventsResponse {
 }
 
 function cookieKey(): Buffer {
-  const secret = process.env.GOOGLE_OAUTH_COOKIE_SECRET;
-  if (!secret) throw new Error("GOOGLE_OAUTH_COOKIE_SECRET is not configured.");
-  return createHash("sha256").update(secret).digest();
+  const secret =
+    cleanEnvironmentValue("GOOGLE_OAUTH_COOKIE_SECRET") ??
+    cleanEnvironmentValue("GOOGLE_CLIENT_SECRET");
+  if (!secret) {
+    throw new Error("Google OAuth cookie encryption is not configured.");
+  }
+  return createHash("sha256")
+    .update(`relay-google-calendar-cookie:${secret}`)
+    .digest();
+}
+
+export function cleanEnvironmentValue(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  if (!value) return undefined;
+  const quoted = value.match(/^(["'])(.*)\1$/);
+  return quoted ? quoted[2].trim() : value;
 }
 
 export function encryptCookie(value: object): string {
