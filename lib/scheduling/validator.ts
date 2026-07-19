@@ -3,8 +3,12 @@ import type { DaySchedule, ValidationResult } from "./types";
 
 export function validateSchedule(schedule: DaySchedule): ValidationResult {
   const analysis = analyzeSchedule(schedule);
-  const hardIssues = analysis.issues.filter((issue) => issue.severity === "hard");
-  const softIssues = analysis.issues.filter((issue) => issue.severity === "soft");
+  const hardIssues = analysis.issues.filter(
+    (issue) => issue.severity === "hard",
+  );
+  const softIssues = analysis.issues.filter(
+    (issue) => issue.severity === "soft",
+  );
   const valid = hardIssues.length === 0 && analysis.overloadedMinutes === 0;
   const summary = valid
     ? softIssues.length === 0

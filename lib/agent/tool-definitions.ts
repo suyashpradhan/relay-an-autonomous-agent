@@ -2,14 +2,22 @@ import { schedulingToolSchemas } from "../scheduling/tools";
 import type { SchedulingToolName } from "../scheduling/types";
 
 const descriptions: Record<SchedulingToolName, string> = {
-  inspect_schedule: "Inspect the current schedule and return deterministic issues, capacity, free slots, and health score. Does not mutate.",
-  find_available_slots: "Find collision-free slots of at least the requested duration, optionally before a deadline. Does not mutate.",
-  move_task: "Move one movable flexible task to a new start time without changing its duration.",
-  split_task: "Replace one splittable task with two or more non-overlapping blocks whose durations exactly equal the original duration.",
-  shorten_task: "Shorten one eligible task without going below its minimum duration.",
-  defer_task: "Remove one deferrable task from active demand and record the reason.",
-  insert_break: "Insert a break into a collision-free time range within working hours.",
-  validate_schedule: "Run the independent deterministic validator. Only a valid result permits completion.",
+  inspect_schedule:
+    "Inspect the current schedule and return deterministic issues, capacity, free slots, and health score. Does not mutate.",
+  find_available_slots:
+    "Find collision-free slots of at least the requested duration, optionally before a deadline. Does not mutate.",
+  move_task:
+    "Move one movable flexible task to a new start time without changing its duration.",
+  split_task:
+    "Replace one splittable task with two or more non-overlapping blocks whose durations exactly equal the original duration.",
+  shorten_task:
+    "Shorten one eligible task without going below its minimum duration.",
+  defer_task:
+    "Remove one deferrable task from active demand and record the reason.",
+  insert_break:
+    "Insert a break into a collision-free time range within working hours.",
+  validate_schedule:
+    "Run the independent deterministic validator. Only a valid result permits completion.",
 };
 
 const emptyObject = {
@@ -25,9 +33,9 @@ const parameters: Record<SchedulingToolName, Record<string, unknown>> = {
     type: "object",
     properties: {
       duration: { type: "integer", minimum: 1 },
-      before: { type: "integer", minimum: 0, maximum: 1440 },
+      before: { type: ["integer", "null"], minimum: 0, maximum: 1440 },
     },
-    required: ["duration"],
+    required: ["duration", "before"],
     additionalProperties: false,
   },
   move_task: {
@@ -109,6 +117,8 @@ export const agentToolDefinitions: AgentToolDefinition[] = (
   strict: true,
 }));
 
-export function isSchedulingToolName(value: string): value is SchedulingToolName {
+export function isSchedulingToolName(
+  value: string,
+): value is SchedulingToolName {
   return Object.hasOwn(schedulingToolSchemas, value);
 }

@@ -34,7 +34,14 @@ function task(
 }
 
 function meeting(id: string, title: string, start: number, end: number) {
-  return { kind: "meeting" as const, id, title, start, end, fixed: true as const };
+  return {
+    kind: "meeting" as const,
+    id,
+    title,
+    start,
+    end,
+    fixed: true as const,
+  };
 }
 
 export interface DemoScenario {
@@ -51,7 +58,8 @@ export const demoScenarios: DemoScenario[] = [
     id: "product-launch",
     label: "01",
     name: "Product Launch Day",
-    description: "Critical launch work collides with fixed reviews and a hard publishing cutoff.",
+    description:
+      "Critical launch work collides with fixed reviews and a hard publishing cutoff.",
     expectedPressure: "high pressure",
     schedule: {
       id: "product-launch",
@@ -60,13 +68,29 @@ export const demoScenarios: DemoScenario[] = [
       workingHours: { start: 9 * 60, end: 17 * 60 },
       items: [
         meeting("standup", "Launch stand-up", 540, 585),
-        task("launch-deck", "Finalize launch deck", 570, 120, { minimumDuration: 60, priority: "critical", deadline: 720, canShorten: true }),
+        task("launch-deck", "Finalize launch deck", 570, 120, {
+          minimumDuration: 60,
+          priority: "critical",
+          deadline: 720,
+          canShorten: true,
+        }),
         meeting("exec-review", "Executive review", 660, 720),
-        task("release-notes", "Publish release notes", 705, 90, { priority: "critical", deadline: 780 }),
+        task("release-notes", "Publish release notes", 705, 90, {
+          priority: "critical",
+          deadline: 780,
+        }),
         meeting("press-briefing", "Press briefing", 795, 855),
-        task("qa-pass", "Final QA pass", 840, 105, { minimumDuration: 60, priority: "high", deadline: 930, canShorten: true }),
+        task("qa-pass", "Final QA pass", 840, 105, {
+          minimumDuration: 60,
+          priority: "high",
+          deadline: 930,
+          canShorten: true,
+        }),
         meeting("customer-call", "Launch customer call", 930, 990),
-        task("backlog-groom", "Groom follow-up backlog", 975, 75, { priority: "low", deadline: 1020 }),
+        task("backlog-groom", "Groom follow-up backlog", 975, 75, {
+          priority: "low",
+          deadline: 1020,
+        }),
       ],
     },
   },
@@ -74,7 +98,8 @@ export const demoScenarios: DemoScenario[] = [
     id: "overloaded-monday",
     label: "02",
     name: "Overloaded Monday",
-    description: "Recurring meetings consume the day while flexible planning work spills past hours.",
+    description:
+      "Recurring meetings consume the day while flexible planning work spills past hours.",
     expectedPressure: "90m over",
     schedule: {
       id: "overloaded-monday",
@@ -83,13 +108,31 @@ export const demoScenarios: DemoScenario[] = [
       workingHours: { start: 540, end: 1020 },
       items: [
         meeting("weekly-sync", "Weekly team sync", 540, 600),
-        task("strategy-memo", "Write strategy memo", 585, 120, { minimumDuration: 75, priority: "high", deadline: 900, canShorten: true }),
+        task("strategy-memo", "Write strategy memo", 585, 120, {
+          minimumDuration: 75,
+          priority: "high",
+          deadline: 900,
+          canShorten: true,
+        }),
         meeting("one-one", "Manager 1:1", 690, 735),
-        task("research", "Customer research synthesis", 720, 120, { priority: "high", deadline: 960 }),
+        task("research", "Customer research synthesis", 720, 120, {
+          priority: "high",
+          deadline: 960,
+        }),
         meeting("planning", "Quarterly planning", 825, 915),
-        task("metrics", "Update metrics report", 900, 90, { minimumDuration: 45, priority: "medium", deadline: 990, canShorten: true }),
+        task("metrics", "Update metrics report", 900, 90, {
+          minimumDuration: 45,
+          priority: "medium",
+          deadline: 990,
+          canShorten: true,
+        }),
         meeting("retro", "Project retro", 975, 1035),
-        task("inbox", "Process priority inbox", 1020, 60, { minimumDuration: 30, priority: "low", deadline: 1020, canShorten: true }),
+        task("inbox", "Process priority inbox", 1020, 60, {
+          minimumDuration: 30,
+          priority: "low",
+          deadline: 1020,
+          canShorten: true,
+        }),
       ],
     },
   },
@@ -97,7 +140,8 @@ export const demoScenarios: DemoScenario[] = [
     id: "deadline-collision",
     label: "03",
     name: "Deadline Collision",
-    description: "Two high-priority deliverables share a deadline and compete with immovable reviews.",
+    description:
+      "Two high-priority deliverables share a deadline and compete with immovable reviews.",
     expectedPressure: "2 deadlines",
     schedule: {
       id: "deadline-collision",
@@ -105,13 +149,31 @@ export const demoScenarios: DemoScenario[] = [
       date: "2026-07-22",
       workingHours: { start: 540, end: 1020 },
       items: [
-        task("proposal", "Finish enterprise proposal", 540, 150, { minimumDuration: 90, priority: "critical", deadline: 780, canShorten: true }),
+        task("proposal", "Finish enterprise proposal", 540, 150, {
+          minimumDuration: 90,
+          priority: "critical",
+          deadline: 780,
+          canShorten: true,
+        }),
         meeting("design-review", "Design review", 660, 720),
-        task("board-update", "Prepare board update", 705, 120, { minimumDuration: 60, priority: "critical", deadline: 810, canShorten: true }),
+        task("board-update", "Prepare board update", 705, 120, {
+          minimumDuration: 60,
+          priority: "critical",
+          deadline: 810,
+          canShorten: true,
+        }),
         meeting("legal-review", "Legal review", 780, 840),
-        task("pricing", "Pricing analysis", 825, 105, { priority: "high", deadline: 900 }),
+        task("pricing", "Pricing analysis", 825, 105, {
+          priority: "high",
+          deadline: 900,
+        }),
         meeting("client-demo", "Client demo", 915, 975),
-        task("notes", "Send decision notes", 960, 75, { minimumDuration: 30, priority: "medium", deadline: 1020, canShorten: true }),
+        task("notes", "Send decision notes", 960, 75, {
+          minimumDuration: 30,
+          priority: "medium",
+          deadline: 1020,
+          canShorten: true,
+        }),
       ],
     },
   },

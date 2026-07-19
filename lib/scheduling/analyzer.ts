@@ -12,7 +12,9 @@ const LUNCH_WINDOW_END = 14 * 60;
 const MIN_LUNCH_MINUTES = 30;
 
 function activeItems(schedule: DaySchedule): ScheduleItem[] {
-  return schedule.items.filter((item) => item.kind !== "task" || !item.deferred);
+  return schedule.items.filter(
+    (item) => item.kind !== "task" || !item.deferred,
+  );
 }
 
 function overlapMinutes(a: ScheduleItem, b: ScheduleItem): number {
@@ -20,7 +22,9 @@ function overlapMinutes(a: ScheduleItem, b: ScheduleItem): number {
 }
 
 export function detectOverlaps(schedule: DaySchedule): ScheduleIssue[] {
-  const sorted = [...activeItems(schedule)].sort((a, b) => a.start - b.start || a.end - b.end);
+  const sorted = [...activeItems(schedule)].sort(
+    (a, b) => a.start - b.start || a.end - b.end,
+  );
   const issues: ScheduleIssue[] = [];
   for (let left = 0; left < sorted.length; left += 1) {
     for (let right = left + 1; right < sorted.length; right += 1) {
@@ -42,18 +46,27 @@ export function detectOverlaps(schedule: DaySchedule): ScheduleIssue[] {
   return issues;
 }
 
-function mergedBusyRanges(schedule: DaySchedule): Array<{ start: number; end: number }> {
+function mergedBusyRanges(
+  schedule: DaySchedule,
+): Array<{ start: number; end: number }> {
   const { start: dayStart, end: dayEnd } = schedule.workingHours;
   const ranges = activeItems(schedule)
-    .map((item) => ({ start: Math.max(dayStart, item.start), end: Math.min(dayEnd, item.end) }))
+    .map((item) => ({
+      start: Math.max(dayStart, item.start),
+      end: Math.min(dayEnd, item.end),
+    }))
     .filter((range) => range.end > range.start)
     .sort((a, b) => a.start - b.start);
-  return ranges.reduce<Array<{ start: number; end: number }>>((merged, range) => {
-    const previous = merged.at(-1);
-    if (!previous || range.start > previous.end) return [...merged, { ...range }];
-    previous.end = Math.max(previous.end, range.end);
-    return merged;
-  }, []);
+  return ranges.reduce<Array<{ start: number; end: number }>>(
+    (merged, range) => {
+      const previous = merged.at(-1);
+      if (!previous || range.start > previous.end)
+        return [...merged, { ...range }];
+      previous.end = Math.max(previous.end, range.end);
+      return merged;
+    },
+    [],
+  );
 }
 
 export function calculateAvailableTime(schedule: DaySchedule): number {
@@ -61,11 +74,17 @@ export function calculateAvailableTime(schedule: DaySchedule): number {
 }
 
 export function calculateBusyTime(schedule: DaySchedule): number {
-  return mergedBusyRanges(schedule).reduce((total, range) => total + range.end - range.start, 0);
+  return mergedBusyRanges(schedule).reduce(
+    (total, range) => total + range.end - range.start,
+    0,
+  );
 }
 
 export function calculateOverloadedMinutes(schedule: DaySchedule): number {
-  const rawDemand = activeItems(schedule).reduce((total, item) => total + item.end - item.start, 0);
+  const rawDemand = activeItems(schedule).reduce(
+    (total, item) => total + item.end - item.start,
+    0,
+  );
   return Math.max(0, rawDemand - calculateAvailableTime(schedule));
 }
 
@@ -81,7 +100,10 @@ export function detectMissingLunch(schedule: DaySchedule): boolean {
 
 export function detectDeadlineRisk(schedule: DaySchedule): ScheduleIssue[] {
   return activeItems(schedule)
-    .filter((item): item is ScheduledTaskBlock => item.kind === "task" && item.end > item.deadline)
+    .filter(
+      (item): item is ScheduledTaskBlock =>
+        item.kind === "task" && item.end > item.deadline,
+    )
     .map((item) => ({
       id: `deadline-${item.id}`,
       code: "DEADLINE_RISK" as const,
@@ -95,7 +117,11 @@ export function detectDeadlineRisk(schedule: DaySchedule): ScheduleIssue[] {
 
 export function detectOutOfHours(schedule: DaySchedule): ScheduleIssue[] {
   return activeItems(schedule)
-    .filter((item) => item.start < schedule.workingHours.start || item.end > schedule.workingHours.end)
+    .filter(
+      (item) =>
+        item.start < schedule.workingHours.start ||
+        item.end > schedule.workingHours.end,
+    )
     .map((item) => ({
       id: `hours-${item.id}`,
       code: "OUT_OF_HOURS" as const,
@@ -106,15 +132,26 @@ export function detectOutOfHours(schedule: DaySchedule): ScheduleIssue[] {
     }));
 }
 
-export function findFreeSlots(schedule: DaySchedule, minimumDuration = 1, before?: number): TimeSlot[] {
+export function findFreeSlots(
+  schedule: DaySchedule,
+  minimumDuration = 1,
+  before?: number,
+): TimeSlot[] {
   const dayStart = schedule.workingHours.start;
-  const dayEnd = Math.min(schedule.workingHours.end, before ?? schedule.workingHours.end);
+  const dayEnd = Math.min(
+    schedule.workingHours.end,
+    before ?? schedule.workingHours.end,
+  );
   const ranges = mergedBusyRanges(schedule);
   const slots: TimeSlot[] = [];
   let cursor = dayStart;
   for (const range of ranges) {
     if (range.start > cursor && range.start - cursor >= minimumDuration) {
-      slots.push({ start: cursor, end: range.start, duration: range.start - cursor });
+      slots.push({
+        start: cursor,
+        end: range.start,
+        duration: range.start - cursor,
+      });
     }
     cursor = Math.max(cursor, range.end);
   }
@@ -124,7 +161,10 @@ export function findFreeSlots(schedule: DaySchedule, minimumDuration = 1, before
   return slots.filter((slot) => slot.start < dayEnd && slot.end <= dayEnd);
 }
 
-export function calculateHealthScore(issues: ScheduleIssue[], overloadedMinutes: number): number {
+export function calculateHealthScore(
+  issues: ScheduleIssue[],
+  overloadedMinutes: number,
+): number {
   const deductions = issues.reduce((total, issue) => {
     if (issue.code === "OVERLAP") return total + 14;
     if (issue.code === "OUT_OF_HOURS") return total + 18;
@@ -132,7 +172,10 @@ export function calculateHealthScore(issues: ScheduleIssue[], overloadedMinutes:
     if (issue.code === "MISSING_LUNCH") return total + 8;
     return total + 10;
   }, 0);
-  return Math.max(0, Math.round(100 - deductions - Math.min(25, overloadedMinutes / 6)));
+  return Math.max(
+    0,
+    Math.round(100 - deductions - Math.min(25, overloadedMinutes / 6)),
+  );
 }
 
 export function analyzeSchedule(schedule: DaySchedule): ScheduleAnalysis {
@@ -141,7 +184,11 @@ export function analyzeSchedule(schedule: DaySchedule): ScheduleAnalysis {
   const missingLunch = detectMissingLunch(schedule);
   const deadlineRisks = detectDeadlineRisk(schedule);
   const outOfHours = detectOutOfHours(schedule);
-  const issues: ScheduleIssue[] = [...overlaps, ...deadlineRisks, ...outOfHours];
+  const issues: ScheduleIssue[] = [
+    ...overlaps,
+    ...deadlineRisks,
+    ...outOfHours,
+  ];
   if (overloadedMinutes > 0) {
     issues.push({
       id: "overloaded",

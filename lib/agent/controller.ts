@@ -103,13 +103,18 @@ function extractSummary(response: OpenAIResponse): string {
   if (response.output_text?.trim()) return response.output_text.trim();
   for (const item of response.output ?? []) {
     if (item.type !== "message" || !("content" in item)) continue;
-    const text = item.content?.map((content) => content.text ?? "").join(" ").trim();
+    const text = item.content
+      ?.map((content) => content.text ?? "")
+      .join(" ")
+      .trim();
     if (text) return text;
   }
   return "Selected the next deterministic scheduling action.";
 }
 
-async function requestModelDecision(context: AgentDecisionContext): Promise<ModelDecision> {
+async function requestModelDecision(
+  context: AgentDecisionContext,
+): Promise<ModelDecision> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is not configured on the server.");
@@ -143,13 +148,19 @@ async function requestModelDecision(context: AgentDecisionContext): Promise<Mode
     }),
   });
 
-  const payload = await response.json() as OpenAIResponse;
+  const payload = (await response.json()) as OpenAIResponse;
   if (!response.ok) {
-    throw new Error(payload.error?.message || `OpenAI request failed with status ${response.status}.`);
+    throw new Error(
+      payload.error?.message ||
+        `OpenAI request failed with status ${response.status}.`,
+    );
   }
-  const call = payload.output?.find((item): item is ModelFunctionCall => item.type === "function_call");
+  const call = payload.output?.find(
+    (item): item is ModelFunctionCall => item.type === "function_call",
+  );
   if (!call) throw new Error("The model did not select a scheduling tool.");
-  if (!isSchedulingToolName(call.name)) throw new Error(`The model selected an unknown tool: ${call.name}.`);
+  if (!isSchedulingToolName(call.name))
+    throw new Error(`The model selected an unknown tool: ${call.name}.`);
 
   let toolInput: unknown;
   try {
@@ -179,22 +190,31 @@ function createStep(
     success: toolResult.success,
     errorCode: toolResult.errorCode,
     durationMs,
-    scheduleAfter: toolResult.success && toolResult.schedule
-      ? cloneSchedule(toolResult.schedule)
-      : undefined,
+    scheduleAfter:
+      toolResult.success && toolResult.schedule
+        ? cloneSchedule(toolResult.schedule)
+        : undefined,
   };
 }
 
-function scheduleChanges(original: DaySchedule, current: DaySchedule): ScheduleChanges {
+function scheduleChanges(
+  original: DaySchedule,
+  current: DaySchedule,
+): ScheduleChanges {
   const originalTasks = new Map(
     original.items
       .filter((item): item is ScheduledTaskBlock => item.kind === "task")
       .map((item) => [item.taskId, item]),
   );
-  const currentTasks = current.items.filter((item): item is ScheduledTaskBlock => item.kind === "task");
+  const currentTasks = current.items.filter(
+    (item): item is ScheduledTaskBlock => item.kind === "task",
+  );
   const currentByTask = new Map<string, ScheduledTaskBlock[]>();
   for (const task of currentTasks) {
-    currentByTask.set(task.taskId, [...(currentByTask.get(task.taskId) ?? []), task]);
+    currentByTask.set(task.taskId, [
+      ...(currentByTask.get(task.taskId) ?? []),
+      task,
+    ]);
   }
 
   const moved: string[] = [];
@@ -206,20 +226,32 @@ function scheduleChanges(original: DaySchedule, current: DaySchedule): ScheduleC
     if (after.some((task) => task.deferred)) deferred.push(before.title);
     const active = after.filter((task) => !task.deferred);
     if (active.length > 1) split.push(before.title);
-    if (active.length === 1 && active[0].start !== before.start) moved.push(before.title);
+    if (active.length === 1 && active[0].start !== before.start)
+      moved.push(before.title);
     const activeDuration = active.reduce((sum, task) => sum + task.duration, 0);
-    if (active.length > 0 && activeDuration < before.duration) shortened.push(before.title);
+    if (active.length > 0 && activeDuration < before.duration)
+      shortened.push(before.title);
   }
-  const originalBreakIds = new Set(original.items.filter((item) => item.kind === "break").map((item) => item.id));
+  const originalBreakIds = new Set(
+    original.items
+      .filter((item) => item.kind === "break")
+      .map((item) => item.id),
+  );
   const breaksInserted = current.items
     .filter((item) => item.kind === "break" && !originalBreakIds.has(item.id))
     .map((item) => item.title);
   return { moved, split, shortened, deferred, breaksInserted };
 }
 
-function finalSummary(status: AgentRunStatus, validationSummary: string, attempts: number): string {
-  if (status === "completed") return `Relay repaired the day in ${attempts} tool attempts. ${validationSummary}`;
-  if (status === "partially_completed") return `Relay improved the day but reached its ${attempts}-attempt limit. ${validationSummary}`;
+function finalSummary(
+  status: AgentRunStatus,
+  validationSummary: string,
+  attempts: number,
+): string {
+  if (status === "completed")
+    return `Relay repaired the day in ${attempts} tool attempts. ${validationSummary}`;
+  if (status === "partially_completed")
+    return `Relay improved the day but reached its ${attempts}-attempt limit. ${validationSummary}`;
   return `Relay stopped before completing the repair. ${validationSummary}`;
 }
 
@@ -227,7 +259,10 @@ export async function runSchedulingAgent(
   schedule: DaySchedule,
   options: RunAgentOptions = {},
 ): Promise<AgentRunResult> {
-  const maxAttempts = Math.min(12, Math.max(2, options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS));
+  const maxAttempts = Math.min(
+    12,
+    Math.max(2, options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS),
+  );
   const originalSchedule = cloneSchedule(schedule);
   let workingSchedule = cloneSchedule(schedule);
   const initialAnalysis = analyzeSchedule(originalSchedule);
@@ -243,15 +278,17 @@ export async function runSchedulingAgent(
   const inspectionStarted = performance.now();
   const inspection = executeTool("inspect_schedule", workingSchedule, {});
   attemptCount += 1;
-  steps.push(createStep(
-    steps.length + 1,
-    "inspection",
-    "Inspect the original schedule before choosing any mutation.",
-    "inspect_schedule",
-    {},
-    inspection,
-    Math.round(performance.now() - inspectionStarted),
-  ));
+  steps.push(
+    createStep(
+      steps.length + 1,
+      "inspection",
+      "Inspect the original schedule before choosing any mutation.",
+      "inspect_schedule",
+      {},
+      inspection,
+      Math.round(performance.now() - inspectionStarted),
+    ),
+  );
   options.onStep?.(steps.at(-1)!);
 
   try {
@@ -270,7 +307,9 @@ export async function runSchedulingAgent(
         attemptCount,
         maxAttempts,
       });
-      setStatus(decision.toolName === "validate_schedule" ? "validating" : "executing");
+      setStatus(
+        decision.toolName === "validate_schedule" ? "validating" : "executing",
+      );
       const signature = `${decision.toolName}:${JSON.stringify(decision.toolInput)}`;
       const started = performance.now();
       let result: ToolResult;
@@ -280,24 +319,32 @@ export async function runSchedulingAgent(
           success: false,
           tool: decision.toolName,
           errorCode: "REPEATED_FAILED_CALL",
-          observation: "This identical call was already rejected. Select a different tool or different arguments.",
+          observation:
+            "This identical call was already rejected. Select a different tool or different arguments.",
         };
       } else {
-        result = executeTool(decision.toolName, workingSchedule, decision.toolInput);
+        result = executeTool(
+          decision.toolName,
+          workingSchedule,
+          decision.toolInput,
+        );
       }
       attemptCount += 1;
       if (!result.success) failedCalls.add(signature);
-      if (result.success && result.schedule) workingSchedule = cloneSchedule(result.schedule);
+      if (result.success && result.schedule)
+        workingSchedule = cloneSchedule(result.schedule);
       setStatus("observing");
-      steps.push(createStep(
-        steps.length + 1,
-        decision.toolName === "validate_schedule" ? "validation" : "tool",
-        decision.summary,
-        decision.toolName,
-        decision.toolInput,
-        result,
-        Math.round(performance.now() - started),
-      ));
+      steps.push(
+        createStep(
+          steps.length + 1,
+          decision.toolName === "validate_schedule" ? "validation" : "tool",
+          decision.summary,
+          decision.toolName,
+          decision.toolInput,
+          result,
+          Math.round(performance.now() - started),
+        ),
+      );
       options.onStep?.(steps.at(-1)!);
 
       if (decision.toolName === "validate_schedule" && result.success) {
@@ -310,16 +357,24 @@ export async function runSchedulingAgent(
     }
   } catch (error) {
     setStatus("failed");
-    const message = error instanceof Error ? error.message : "The agent controller failed.";
-    steps.push(createStep(
-      steps.length + 1,
-      "validation",
-      "The controller stopped because the model request could not continue.",
-      "validate_schedule",
-      {},
-      { success: false, tool: "validate_schedule", errorCode: "INVALID_INPUT", observation: message },
-      0,
-    ));
+    const message =
+      error instanceof Error ? error.message : "The agent controller failed.";
+    steps.push(
+      createStep(
+        steps.length + 1,
+        "validation",
+        "The controller stopped because the model request could not continue.",
+        "validate_schedule",
+        {},
+        {
+          success: false,
+          tool: "validate_schedule",
+          errorCode: "INVALID_INPUT",
+          observation: message,
+        },
+        0,
+      ),
+    );
     options.onStep?.(steps.at(-1)!);
   }
 
