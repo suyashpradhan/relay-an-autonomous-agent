@@ -33,9 +33,9 @@ const parameters: Record<SchedulingToolName, Record<string, unknown>> = {
     type: "object",
     properties: {
       duration: { type: "integer", minimum: 1 },
-      before: { type: "integer", minimum: 0, maximum: 1440 },
+      before: { type: ["integer", "null"], minimum: 0, maximum: 1440 },
     },
-    required: ["duration"],
+    required: ["duration", "before"],
     additionalProperties: false,
   },
   move_task: {
