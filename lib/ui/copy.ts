@@ -41,6 +41,7 @@ const errorLabels: Record<ToolErrorCode, string> = {
   DEADLINE_EXCEEDED: "That change would miss the deadline",
   INVALID_BLOCKS: "Those time blocks do not work",
   REPEATED_FAILED_CALL: "Relay already tried that option",
+  FIXED_MEETING: "Meetings are protected",
 };
 
 export function friendlyStatus(status: AgentRunStatus | "idle"): string {
