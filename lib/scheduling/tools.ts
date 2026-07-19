@@ -106,7 +106,7 @@ function taskSelectionRejection(
     return {
       ...reject(
         tool,
-        "FIXED_MEETING",
+        "TASK_IMMOVABLE",
         `${selected.title} is a fixed meeting and cannot be changed. Select the flexible task on the other side of the conflict.`,
       ),
       data: { selectedItemKind: "meeting", movableTaskIds },

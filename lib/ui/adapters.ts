@@ -5,6 +5,7 @@ import type {
   DaySchedule,
   ScheduleAnalysis,
   ScheduleItem,
+  SchedulingToolName,
 } from "../scheduling/types";
 
 export interface DisplayBlock {
@@ -177,7 +178,7 @@ export function replaySchedule(run: AgentRunResult, stepIndex: number): DaySched
   return schedule;
 }
 
-export function activeTool(steps: AgentStep[]): string | undefined {
+export function activeTool(steps: AgentStep[]): SchedulingToolName | undefined {
   return steps.at(-1)?.toolName;
 }
 
