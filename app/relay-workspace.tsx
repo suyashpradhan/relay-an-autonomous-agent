@@ -53,6 +53,7 @@ import {
   friendlyStatus,
   friendlyToolName,
 } from "../lib/ui/copy";
+import { captureRelayEvent } from "../lib/analytics/posthog";
 
 type Screen =
   | "entry"
@@ -126,6 +127,10 @@ function EntryCard({
 }
 
 function EntryScreen({ navigate }: { navigate: (screen: Screen) => void }) {
+  function choose(screen: Screen, path: string) {
+    captureRelayEvent("relay_entry_path_selected", { path });
+    navigate(screen);
+  }
   return (
     <main className="pp-entry">
       <span className="pp-kicker">
@@ -149,21 +154,21 @@ function EntryScreen({ navigate }: { navigate: (screen: Screen) => void }) {
           title="Try a Demo Day"
           copy="See Relay work on a prepared, overloaded schedule. No account or setup needed."
           action="Choose a Demo"
-          onClick={() => navigate("scenarios")}
+          onClick={() => choose("scenarios", "demo")}
         />
         <EntryCard
           icon={<ListPlus size={21} />}
           title="Add My Own Schedule"
           copy="Enter meetings that cannot move and tasks that Relay can rearrange."
           action="Build My Day"
-          onClick={() => navigate("manual")}
+          onClick={() => choose("manual", "manual")}
         />
         <EntryCard
           icon={<CalendarDays size={21} />}
           title="Import Google Calendar"
           copy="Bring in one day of timed meetings from your primary calendar. Relay only reads—Google events are never changed."
           action="Choose a Day"
-          onClick={() => navigate("connect")}
+          onClick={() => choose("connect", "google_calendar")}
         />
       </div>
       <ul className="pp-assurances">
@@ -597,6 +602,10 @@ function ConnectScreen({
   function connectGoogleCalendar() {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const query = new URLSearchParams({ date, timeZone });
+    captureRelayEvent("relay_google_calendar_connect_started", {
+      date,
+      timeZone,
+    });
     window.location.assign(`/api/google-calendar/connect?${query}`);
   }
 
@@ -963,6 +972,10 @@ export function RelayWorkspace() {
 
   async function repair() {
     const source = structuredClone(schedule);
+    captureRelayEvent("relay_repair_started", {
+      scheduleId: source.id,
+      issueCount: analyzeSchedule(source).issues.length,
+    });
     setOriginal(source);
     setCurrent(structuredClone(source));
     setSteps([]);
@@ -1001,11 +1014,24 @@ export function RelayWorkspace() {
           if (event.type === "status" && event.status) setStatus(event.status);
           if (event.type === "step" && event.step) {
             const step = event.step;
+            captureRelayEvent("relay_tool_result", {
+              tool: step.toolName,
+              success: step.success,
+              errorCode: step.errorCode ?? null,
+              sequence: step.sequence,
+            });
             setSteps((existing) => [...existing, step]);
             if (step.success && step.scheduleAfter)
               setCurrent(step.scheduleAfter);
           }
           if (event.type === "complete" && event.result) {
+            captureRelayEvent("relay_repair_completed", {
+              status: event.result.status,
+              attempts: event.result.attemptCount,
+              healthBefore: event.result.initialAnalysis.healthScore,
+              healthAfter: event.result.finalAnalysis.healthScore,
+              remainingIssues: event.result.unresolvedIssues.length,
+            });
             setRun(event.result);
             setCurrent(event.result.workingSchedule);
             setStatus(event.result.status);

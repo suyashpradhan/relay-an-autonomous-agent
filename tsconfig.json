@@ -31,6 +31,6 @@
     "types/**/*.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
-  ],
+, "lib/analytics/posthog.tsx"  ],
   "exclude": ["node_modules", "db", "examples", "worker", "dist"]
 }

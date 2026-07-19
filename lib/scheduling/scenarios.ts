@@ -99,8 +99,8 @@ export const demoScenarios: DemoScenario[] = [
     label: "02",
     name: "Overloaded Monday",
     description:
-      "Recurring meetings consume the day while flexible planning work spills past hours.",
-    expectedPressure: "90m over",
+      "Recurring meetings consume the day while three flexible tasks compete for focus time.",
+    expectedPressure: "45m over",
     schedule: {
       id: "overloaded-monday",
       title: "Overloaded Monday",
@@ -126,13 +126,6 @@ export const demoScenarios: DemoScenario[] = [
           deadline: 990,
           canShorten: true,
         }),
-        meeting("retro", "Project retro", 975, 1035),
-        task("inbox", "Process priority inbox", 1020, 60, {
-          minimumDuration: 30,
-          priority: "low",
-          deadline: 1020,
-          canShorten: true,
-        }),
       ],
     },
   },
@@ -141,7 +134,7 @@ export const demoScenarios: DemoScenario[] = [
     label: "03",
     name: "Deadline Collision",
     description:
-      "Two high-priority deliverables share a deadline and compete with immovable reviews.",
+      "Three important deliverables compete with immovable reviews and a shared afternoon cutoff.",
     expectedPressure: "2 deadlines",
     schedule: {
       id: "deadline-collision",
@@ -149,31 +142,25 @@ export const demoScenarios: DemoScenario[] = [
       date: "2026-07-22",
       workingHours: { start: 540, end: 1020 },
       items: [
-        task("proposal", "Finish enterprise proposal", 540, 150, {
+        task("proposal", "Finish enterprise proposal", 540, 120, {
           minimumDuration: 90,
           priority: "critical",
           deadline: 780,
           canShorten: true,
         }),
         meeting("design-review", "Design review", 660, 720),
-        task("board-update", "Prepare board update", 705, 120, {
+        task("board-update", "Prepare board update", 705, 90, {
           minimumDuration: 60,
           priority: "critical",
           deadline: 810,
           canShorten: true,
         }),
         meeting("legal-review", "Legal review", 780, 840),
-        task("pricing", "Pricing analysis", 825, 105, {
+        task("pricing", "Pricing analysis", 825, 90, {
           priority: "high",
           deadline: 900,
         }),
         meeting("client-demo", "Client demo", 915, 975),
-        task("notes", "Send decision notes", 960, 75, {
-          minimumDuration: 30,
-          priority: "medium",
-          deadline: 1020,
-          canShorten: true,
-        }),
       ],
     },
   },

@@ -54,6 +54,7 @@ export interface AgentDecisionContext {
   steps: AgentStep[];
   attemptCount: number;
   maxAttempts: number;
+  plannerFeedback?: string[];
 }
 
 function cloneSchedule(schedule: DaySchedule): DaySchedule {
@@ -98,6 +99,61 @@ function conciseHistory(steps: AgentStep[]): unknown {
     observation: step.toolResult.observation,
     data: step.toolResult.data,
   }));
+}
+
+function recommendedMoves(schedule: DaySchedule): Array<{
+  taskId: string;
+  title: string;
+  earliestValidStart?: number;
+}> {
+  const analysis = analyzeSchedule(schedule);
+  const taskIds = new Set(
+    analysis.overlaps.flatMap((issue) =>
+      issue.itemIds.filter((id) =>
+        schedule.items.some(
+          (item) =>
+            item.kind === "task" &&
+            !item.deferred &&
+            item.canMove &&
+            (item.id === id || item.taskId === id),
+        ),
+      ),
+    ),
+  );
+
+  return [...taskIds].flatMap((id) => {
+    const task = schedule.items.find(
+      (item): item is ScheduledTaskBlock =>
+        item.kind === "task" &&
+        !item.deferred &&
+        (item.id === id || item.taskId === id),
+    );
+    if (!task) return [];
+
+    const otherItems = schedule.items.filter(
+      (item) => item.id !== task.id && (item.kind !== "task" || !item.deferred),
+    );
+    let earliestValidStart: number | undefined;
+    const latestStart =
+      Math.min(schedule.workingHours.end, task.deadline) - task.duration;
+
+    for (
+      let start = schedule.workingHours.start;
+      start <= latestStart;
+      start += 15
+    ) {
+      const end = start + task.duration;
+      const collides = otherItems.some(
+        (item) => start < item.end && end > item.start,
+      );
+      if (!collides) {
+        earliestValidStart = start;
+        break;
+      }
+    }
+
+    return [{ taskId: task.taskId, title: task.title, earliestValidStart }];
+  });
 }
 
 const AGENT_INSTRUCTIONS = `You are Relay's scheduling decision controller.
@@ -147,38 +203,51 @@ async function requestModelDecision(
     currentSchedule,
     originalSchedule: conciseSchedule(context.originalSchedule),
     recordedSteps: conciseHistory(context.steps),
+    plannerFeedback: context.plannerFeedback ?? [],
+    recommendedMoves: recommendedMoves(context.workingSchedule),
     currentAnalysis: analyzeSchedule(context.workingSchedule),
     latestValidation: validateSchedule(context.workingSchedule),
   });
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      instructions: AGENT_INSTRUCTIONS,
-      input: prompt,
-      tools: agentToolDefinitions,
-      tool_choice: "required",
-      parallel_tool_calls: false,
-      max_output_tokens: 900,
-    }),
-  });
+  let payload: OpenAIResponse | undefined;
+  let call: ModelFunctionCall | undefined;
+  for (let requestAttempt = 0; requestAttempt < 2; requestAttempt += 1) {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        instructions: AGENT_INSTRUCTIONS,
+        input:
+          requestAttempt === 0
+            ? prompt
+            : `${prompt}\nThe previous response omitted the required function call. Return exactly one scheduling tool call now.`,
+        tools: agentToolDefinitions,
+        tool_choice: "required",
+        parallel_tool_calls: false,
+        max_output_tokens: 900,
+      }),
+    });
 
-  const payload = (await response.json()) as OpenAIResponse;
-  if (!response.ok) {
-    throw new Error(
-      payload.error?.message ||
-        `OpenAI request failed with status ${response.status}.`,
+    payload = (await response.json()) as OpenAIResponse;
+    if (!response.ok) {
+      throw new Error(
+        payload.error?.message ||
+          `OpenAI request failed with status ${response.status}.`,
+      );
+    }
+    call = payload.output?.find(
+      (item): item is ModelFunctionCall => item.type === "function_call",
     );
+    if (call) break;
   }
-  const call = payload.output?.find(
-    (item): item is ModelFunctionCall => item.type === "function_call",
-  );
-  if (!call) throw new Error("The model did not select a scheduling tool.");
+
+  if (!payload || !call) {
+    throw new Error("The model omitted the required scheduling tool twice.");
+  }
   if (!isSchedulingToolName(call.name))
     throw new Error(`The model selected an unknown tool: ${call.name}.`);
 
@@ -189,6 +258,73 @@ async function requestModelDecision(
     toolInput = call.arguments;
   }
   return { summary: extractSummary(payload), toolName: call.name, toolInput };
+}
+
+function planningProblem(
+  decision: ModelDecision,
+  schedule: DaySchedule,
+  steps: AgentStep[],
+): string | undefined {
+  const analysis = analyzeSchedule(schedule);
+  const validation = validateSchedule(schedule);
+  const activeTaskIds = new Set(
+    schedule.items
+      .filter(
+        (item): item is ScheduledTaskBlock =>
+          item.kind === "task" && !item.deferred,
+      )
+      .flatMap((item) => [item.id, item.taskId]),
+  );
+  const taskMutationTools: SchedulingToolName[] = [
+    "move_task",
+    "split_task",
+    "shorten_task",
+    "defer_task",
+  ];
+
+  if (decision.toolName === "inspect_schedule") {
+    return "The controller already inspected this schedule. Choose a mutation that resolves a current issue.";
+  }
+  if (decision.toolName === "validate_schedule" && !validation.valid) {
+    return `Validation is known to fail with ${validation.hardIssues.length} hard issues. Apply a useful mutation first.`;
+  }
+  if (
+    decision.toolName === "insert_break" &&
+    validation.hardIssues.length > 0
+  ) {
+    return "Resolve hard conflicts, deadlines, hours, or capacity before inserting lunch.";
+  }
+  if (
+    decision.toolName === "find_available_slots" &&
+    steps.some(
+      (step) =>
+        step.toolName === "find_available_slots" &&
+        step.sequence >
+          Math.max(
+            0,
+            ...steps
+              .filter(
+                (candidate) => candidate.success && candidate.scheduleAfter,
+              )
+              .map((candidate) => candidate.sequence),
+          ),
+    )
+  ) {
+    return "Open slots were already calculated for the current schedule. Use them in a mutation.";
+  }
+  if (taskMutationTools.includes(decision.toolName)) {
+    const input = decision.toolInput as { taskId?: unknown };
+    if (typeof input.taskId !== "string" || !activeTaskIds.has(input.taskId)) {
+      return `Choose a real flexible task ID. Valid IDs: ${[...activeTaskIds].join(", ")}.`;
+    }
+  }
+  if (
+    analysis.overlaps.length > 0 &&
+    decision.toolName === "find_available_slots"
+  ) {
+    return undefined;
+  }
+  return undefined;
 }
 
 function createStep(
@@ -320,13 +456,28 @@ export async function runSchedulingAgent(
 
       setStatus("planning");
       const decide = options.decide ?? requestModelDecision;
-      const decision = await decide({
-        originalSchedule,
-        workingSchedule,
-        steps,
-        attemptCount,
-        maxAttempts,
-      });
+      let decision: ModelDecision | undefined;
+      const plannerFeedback: string[] = [];
+      for (let planningAttempt = 0; planningAttempt < 3; planningAttempt += 1) {
+        decision = await decide({
+          originalSchedule,
+          workingSchedule,
+          steps,
+          attemptCount,
+          maxAttempts,
+          plannerFeedback,
+        });
+        if (options.decide) break;
+        const problem = planningProblem(decision, workingSchedule, steps);
+        if (!problem) break;
+        plannerFeedback.push(problem);
+        decision = undefined;
+      }
+      if (!decision) {
+        throw new Error(
+          "The model did not choose a useful scheduling action after three planning attempts.",
+        );
+      }
       setStatus(
         decision.toolName === "validate_schedule" ? "validating" : "executing",
       );
