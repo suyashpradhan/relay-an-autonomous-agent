@@ -105,6 +105,49 @@ function conciseHistory(steps: AgentStep[]): unknown {
   }));
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toolDefinitionsForSchedule(schedule: DaySchedule) {
+  const activeTaskIds = schedule.items
+    .filter(
+      (item): item is ScheduledTaskBlock =>
+        item.kind === "task" && !item.deferred,
+    )
+    .map((item) => item.taskId);
+  const taskMutationTools = new Set<SchedulingToolName>([
+    "move_task",
+    "split_task",
+    "shorten_task",
+    "defer_task",
+  ]);
+
+  return agentToolDefinitions.map((definition) => {
+    if (!taskMutationTools.has(definition.name)) return definition;
+    const properties = definition.parameters.properties;
+    if (!isRecord(properties) || !isRecord(properties.taskId)) {
+      return definition;
+    }
+
+    return {
+      ...definition,
+      parameters: {
+        ...definition.parameters,
+        properties: {
+          ...properties,
+          taskId: {
+            ...properties.taskId,
+            enum: activeTaskIds,
+            description:
+              "A current flexible task ID. Fixed meeting IDs are not allowed.",
+          },
+        },
+      },
+    };
+  });
+}
+
 function recommendedMoves(schedule: DaySchedule): Array<{
   taskId: string;
   title: string;
@@ -289,7 +332,7 @@ async function requestModelDecision(
         input: mustUseRecoveryTool
           ? `${prompt}\nThe previous plan was not useful. Call ${recoveryTool} now with arguments derived from CURRENT_SCHEDULE, recommendedMoves, and currentAnalysis.`
           : prompt,
-        tools: agentToolDefinitions,
+        tools: toolDefinitionsForSchedule(context.workingSchedule),
         tool_choice: mustUseRecoveryTool
           ? { type: "function", name: recoveryTool }
           : "required",
