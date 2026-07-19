@@ -5,7 +5,7 @@ const descriptions: Record<SchedulingToolName, string> = {
   inspect_schedule:
     "Inspect the current schedule and return deterministic issues, capacity, free slots, and health score. Does not mutate.",
   find_available_slots:
-    "Find collision-free slots of at least the requested duration, optionally before a deadline. Does not mutate.",
+    "Find collision-free slots of at least the requested duration. Set before to a minute value to limit results to a deadline, or null for the full workday. Does not mutate.",
   move_task:
     "Move one movable flexible task to a new start time without changing its duration. taskId must come from currentSchedule.flexibleTasks, never fixedMeetingIds.",
   split_task:
@@ -33,9 +33,15 @@ const parameters: Record<SchedulingToolName, Record<string, unknown>> = {
     type: "object",
     properties: {
       duration: { type: "integer", minimum: 1 },
-      before: { type: "integer", minimum: 0, maximum: 1440 },
+      before: {
+        type: ["integer", "null"],
+        minimum: 0,
+        maximum: 1440,
+        description:
+          "Latest allowed end time in minutes from midnight, or null for no deadline.",
+      },
     },
-    required: ["duration"],
+    required: ["duration", "before"],
     additionalProperties: false,
   },
   move_task: {

@@ -14,7 +14,7 @@ export const schedulingToolSchemas = {
   find_available_slots: z
     .object({
       duration: z.number().int().positive(),
-      before: z.number().int().min(0).max(1440).optional(),
+      before: z.number().int().min(0).max(1440).nullable().optional(),
     })
     .strict(),
   move_task: z
@@ -174,7 +174,11 @@ export function executeTool(
 
   if (name === "find_available_slots") {
     const input = schedulingToolSchemas.find_available_slots.parse(rawInput);
-    const slots = findFreeSlots(schedule, input.duration, input.before);
+    const slots = findFreeSlots(
+      schedule,
+      input.duration,
+      input.before ?? undefined,
+    );
     return success(
       name,
       `Found ${slots.length} available slot${slots.length === 1 ? "" : "s"}.`,
