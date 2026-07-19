@@ -272,7 +272,11 @@ async function requestModelDecision(
   let payload: OpenAIResponse | undefined;
   let call: ModelFunctionCall | undefined;
   const recoveryTool = forcedRecoveryTool(context);
+  const recoveringFromPlanningProblem =
+    (context.plannerFeedback?.length ?? 0) > 0;
   for (let requestAttempt = 0; requestAttempt < 2; requestAttempt += 1) {
+    const mustUseRecoveryTool =
+      recoveringFromPlanningProblem || requestAttempt > 0;
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -282,15 +286,13 @@ async function requestModelDecision(
       body: JSON.stringify({
         model: MODEL,
         instructions: AGENT_INSTRUCTIONS,
-        input:
-          requestAttempt === 0
-            ? prompt
-            : `${prompt}\nThe previous response omitted the required function call. Return exactly one scheduling tool call now.`,
+        input: mustUseRecoveryTool
+          ? `${prompt}\nThe previous plan was not useful. Call ${recoveryTool} now with arguments derived from CURRENT_SCHEDULE, recommendedMoves, and currentAnalysis.`
+          : prompt,
         tools: agentToolDefinitions,
-        tool_choice:
-          requestAttempt === 0
-            ? "required"
-            : { type: "function", name: recoveryTool },
+        tool_choice: mustUseRecoveryTool
+          ? { type: "function", name: recoveryTool }
+          : "required",
         parallel_tool_calls: false,
         max_output_tokens: 900,
       }),
