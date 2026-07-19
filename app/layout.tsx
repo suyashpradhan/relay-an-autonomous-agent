@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PostHogProvider } from "../lib/analytics/posthog";
+import { PostHogProvider } from "../lib/analytics/posthog-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
