@@ -497,6 +497,19 @@ function ReviewScreen({
           {formatRange(schedule.workingHours.start, schedule.workingHours.end)}
         </span>
       </div>
+      <div className="pp-review-actions">
+        <Button variant="ghost" onClick={onEdit}>
+          Edit schedule
+        </Button>
+        <Button variant="ghost" onClick={onBack}>
+          Change scenario
+        </Button>
+        <span />
+        <small>Relay can try up to 12 changes. Meetings will not move.</small>
+        <Button onClick={onRepair}>
+          <Sparkles size={13} /> Make Room in My Day
+        </Button>
+      </div>
       <div className="pp-review-grid">
         <section className="pp-card pp-review-timeline">
           <header>
@@ -563,19 +576,6 @@ function ReviewScreen({
             />
           )}
         </section>
-      </div>
-      <div className="pp-review-actions">
-        <Button variant="ghost" onClick={onEdit}>
-          Edit schedule
-        </Button>
-        <Button variant="ghost" onClick={onBack}>
-          Change scenario
-        </Button>
-        <span />
-        <small>Relay can try up to 12 changes. Meetings will not move.</small>
-        <Button onClick={onRepair}>
-          <Sparkles size={13} /> Make Room in My Day
-        </Button>
       </div>
     </main>
   );

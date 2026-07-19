@@ -7,13 +7,13 @@ const descriptions: Record<SchedulingToolName, string> = {
   find_available_slots:
     "Find collision-free slots of at least the requested duration, optionally before a deadline. Does not mutate.",
   move_task:
-    "Move one movable flexible task to a new start time without changing its duration.",
+    "Move one movable flexible task to a new start time without changing its duration. taskId must come from currentSchedule.flexibleTasks, never fixedMeetingIds.",
   split_task:
-    "Replace one splittable task with two or more non-overlapping blocks whose durations exactly equal the original duration.",
+    "Replace one splittable flexible task with two or more non-overlapping blocks whose durations exactly equal the original duration. taskId must never identify a meeting.",
   shorten_task:
-    "Shorten one eligible task without going below its minimum duration.",
+    "Shorten one eligible flexible task without going below its minimum duration. taskId must never identify a meeting.",
   defer_task:
-    "Remove one deferrable task from active demand and record the reason.",
+    "Remove one deferrable flexible task from active demand and record the reason. taskId must never identify a meeting.",
   insert_break:
     "Insert a break into a collision-free time range within working hours.",
   validate_schedule:
@@ -33,9 +33,9 @@ const parameters: Record<SchedulingToolName, Record<string, unknown>> = {
     type: "object",
     properties: {
       duration: { type: "integer", minimum: 1 },
-      before: { type: ["integer", "null"], minimum: 0, maximum: 1440 },
+      before: { type: "integer", minimum: 0, maximum: 1440 },
     },
-    required: ["duration", "before"],
+    required: ["duration"],
     additionalProperties: false,
   },
   move_task: {

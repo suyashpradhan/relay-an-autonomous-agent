@@ -69,6 +69,21 @@ function conciseSchedule(schedule: DaySchedule): unknown {
       ...item,
       duration: item.end - item.start,
     })),
+    fixedMeetingIds: schedule.items
+      .filter((item) => item.kind === "meeting")
+      .map((item) => item.id),
+    flexibleTasks: schedule.items
+      .filter(
+        (item): item is ScheduledTaskBlock =>
+          item.kind === "task" && !item.deferred,
+      )
+      .map((item) => ({
+        taskId: item.taskId,
+        title: item.title,
+        canMove: item.canMove,
+        deadline: item.deadline,
+        duration: item.duration,
+      })),
   };
 }
 
@@ -90,7 +105,11 @@ You never edit or return a schedule. You choose exactly one provided function to
 
 Rules:
 - Make the fewest, smallest changes that can satisfy deterministic validation.
-- Fixed meetings are immutable. Never invent IDs; use only task IDs present in CURRENT_SCHEDULE.
+- Resolve hard overlaps before soft issues such as lunch.
+- Fixed meetings are immutable. IDs beginning with "google-" identify imported fixed meetings, never tasks.
+- For move_task, split_task, shorten_task, and defer_task, use only a taskId listed in CURRENT_SCHEDULE.flexibleTasks. Never use an item ID from CURRENT_SCHEDULE.fixedMeetingIds.
+- When an overlap contains one meeting and one task, change the task side of the overlap.
+- If a tool returns FIXED_MEETING or TASK_NOT_FOUND, use data.movableTaskIds to select a valid flexible task next.
 - Protect critical and high-priority hard-deadline tasks. Prefer moving/splitting/shortening lower-value work before deferring important work.
 - Respect working hours and task deadlines. Insert a 30-minute lunch between 12:00 and 14:00 when possible.
 - Read structured tool results. A rejected action changed nothing; change strategy after rejection.
@@ -120,11 +139,12 @@ async function requestModelDecision(
     throw new Error("OPENAI_API_KEY is not configured on the server.");
   }
 
+  const currentSchedule = conciseSchedule(context.workingSchedule);
   const prompt = JSON.stringify({
     goal: "Repair the current workday using one tool at a time until deterministic validation succeeds.",
     attempt: context.attemptCount + 1,
     maxAttempts: context.maxAttempts,
-    currentSchedule: conciseSchedule(context.workingSchedule),
+    currentSchedule,
     originalSchedule: conciseSchedule(context.originalSchedule),
     recordedSteps: conciseHistory(context.steps),
     currentAnalysis: analyzeSchedule(context.workingSchedule),

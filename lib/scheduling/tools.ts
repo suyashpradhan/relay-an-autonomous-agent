@@ -14,7 +14,7 @@ export const schedulingToolSchemas = {
   find_available_slots: z
     .object({
       duration: z.number().int().positive(),
-      before: z.number().int().min(0).max(1440).nullish(),
+      before: z.number().int().min(0).max(1440).optional(),
     })
     .strict(),
   move_task: z
@@ -89,6 +89,36 @@ function taskById(
   );
 }
 
+function taskSelectionRejection(
+  tool: SchedulingToolName,
+  schedule: DaySchedule,
+  id: string,
+): ToolResult {
+  const selected = schedule.items.find((item) => item.id === id);
+  const movableTaskIds = schedule.items
+    .filter(
+      (item): item is ScheduledTaskBlock =>
+        item.kind === "task" && !item.deferred && item.canMove,
+    )
+    .map((item) => item.taskId);
+
+  if (selected?.kind === "meeting") {
+    return {
+      ...reject(
+        tool,
+        "FIXED_MEETING",
+        `${selected.title} is a fixed meeting and cannot be changed. Select the flexible task on the other side of the conflict.`,
+      ),
+      data: { selectedItemKind: "meeting", movableTaskIds },
+    };
+  }
+
+  return {
+    ...reject(tool, "TASK_NOT_FOUND", `No active flexible task matches ${id}.`),
+    data: { selectedItemKind: selected?.kind ?? "unknown", movableTaskIds },
+  };
+}
+
 function collides(
   schedule: DaySchedule,
   start: number,
@@ -144,7 +174,7 @@ export function executeTool(
 
   if (name === "find_available_slots") {
     const input = schedulingToolSchemas.find_available_slots.parse(rawInput);
-    const slots = findFreeSlots(schedule, input.duration, input.before ?? undefined);
+    const slots = findFreeSlots(schedule, input.duration, input.before);
     return success(
       name,
       `Found ${slots.length} available slot${slots.length === 1 ? "" : "s"}.`,
@@ -161,12 +191,7 @@ export function executeTool(
   if (name === "move_task") {
     const input = schedulingToolSchemas.move_task.parse(rawInput);
     const task = taskById(schedule, input.taskId);
-    if (!task)
-      return reject(
-        name,
-        "TASK_NOT_FOUND",
-        `No active task matches ${input.taskId}.`,
-      );
+    if (!task) return taskSelectionRejection(name, schedule, input.taskId);
     if (!task.canMove)
       return reject(name, "TASK_IMMOVABLE", `${task.title} cannot be moved.`);
     const end = input.start + task.duration;
@@ -204,12 +229,7 @@ export function executeTool(
   if (name === "shorten_task") {
     const input = schedulingToolSchemas.shorten_task.parse(rawInput);
     const task = taskById(schedule, input.taskId);
-    if (!task)
-      return reject(
-        name,
-        "TASK_NOT_FOUND",
-        `No active task matches ${input.taskId}.`,
-      );
+    if (!task) return taskSelectionRejection(name, schedule, input.taskId);
     if (!task.canShorten)
       return reject(
         name,
@@ -245,12 +265,7 @@ export function executeTool(
   if (name === "defer_task") {
     const input = schedulingToolSchemas.defer_task.parse(rawInput);
     const task = taskById(schedule, input.taskId);
-    if (!task)
-      return reject(
-        name,
-        "TASK_NOT_FOUND",
-        `No active task matches ${input.taskId}.`,
-      );
+    if (!task) return taskSelectionRejection(name, schedule, input.taskId);
     if (!task.canDefer)
       return reject(
         name,
@@ -301,12 +316,7 @@ export function executeTool(
 
   const input = schedulingToolSchemas.split_task.parse(rawInput);
   const task = taskById(schedule, input.taskId);
-  if (!task)
-    return reject(
-      name,
-      "TASK_NOT_FOUND",
-      `No active task matches ${input.taskId}.`,
-    );
+  if (!task) return taskSelectionRejection(name, schedule, input.taskId);
   if (!task.canSplit)
     return reject(name, "TASK_UNSPLITTABLE", `${task.title} cannot be split.`);
   const total = input.blocks.reduce((sum, block) => sum + block.duration, 0);
