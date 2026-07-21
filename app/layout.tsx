@@ -6,6 +6,21 @@ export const metadata: Metadata = {
   title: "Relay — Autonomous workday repair",
   description:
     "Watch Relay make practical changes to repair an overloaded workday.",
+  icons: {
+    icon: "/brand/relay-mark.png",
+    apple: "/brand/relay-mark.png",
+  },
+  openGraph: {
+    title: "Relay — Autonomous workday repair",
+    description: "AI agent for your workday.",
+    images: ["/brand/relay-logo-full.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Relay — Autonomous workday repair",
+    description: "AI agent for your workday.",
+    images: ["/brand/relay-logo-full.png"],
+  },
 };
 
 export default function RootLayout({

@@ -91,29 +91,9 @@ textarea {
   cursor: pointer;
 }
 .pp-logo {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: #16181d;
-  position: relative;
-}
-.pp-logo i {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
-  border-radius: 3px;
-  left: 3px;
-  top: 3px;
-}
-.pp-logo b {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 3px;
-  background: white;
-  right: 3px;
-  bottom: 3px;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 .pp-header-rule {
   height: 17px;
@@ -328,6 +308,12 @@ textarea {
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+.pp-entry-mark {
+  width: 76px;
+  height: 76px;
+  margin-bottom: 18px;
+  object-fit: contain;
 }
 .pp-kicker {
   display: flex;
@@ -2000,10 +1986,19 @@ html[data-theme="dark"] .pp-theme-moon {
 .pp-footer {
   margin-top: auto;
   padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
   text-align: center;
+}
+.pp-footer img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 .pp-footer b {
   color: var(--ink);
@@ -2139,15 +2134,6 @@ html[data-theme="dark"] body,
 html[data-theme="dark"] .pp-root,
 html[data-theme="dark"] .pp-shell {
   background: var(--bg);
-}
-html[data-theme="dark"] .pp-logo {
-  background: #f4f6fa;
-}
-html[data-theme="dark"] .pp-logo i {
-  border-color: rgba(13, 16, 22, 0.5);
-}
-html[data-theme="dark"] .pp-logo b {
-  background: #0d1016;
 }
 html[data-theme="dark"]
   :is(

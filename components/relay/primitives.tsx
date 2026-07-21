@@ -1,6 +1,7 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 export type Tone = "violet" | "green" | "red" | "amber" | "blue" | "neutral";
@@ -70,10 +71,15 @@ export function AppHeader({ onHome }: { onHome: () => void }) {
   return (
     <header className="pp-header">
       <button className="pp-brand" onClick={onHome} aria-label="Relay home">
-        <span className="pp-logo">
-          <i />
-          <b />
-        </span>
+        <Image
+          className="pp-logo"
+          src="/brand/relay-mark.png"
+          width={26}
+          height={26}
+          alt=""
+          priority
+          unoptimized
+        />
         <span>Relay</span>
       </button>
       <span className="pp-spacer" />
@@ -106,6 +112,7 @@ function ThemeToggle() {
 export function AppFooter() {
   return (
     <footer className="pp-footer">
+      <Image src="/brand/relay-mark.png" width={18} height={18} alt="" unoptimized />
       Built by <b>Suyash Pradhan</b> with <span aria-label="love">{"<3"}</span>
     </footer>
   );
