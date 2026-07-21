@@ -1,8 +1,25 @@
 # Relay
 
-Relay is a desktop-first demonstration of an autonomous scheduling agent. The
-model selects one narrow tool at a time, deterministic TypeScript code applies
-or rejects the action, and only the validator can approve a repaired workday.
+Relay demonstrates an autonomous agent repairing an overloaded workday.
+
+The model does not generate or directly edit a schedule. It selects one narrow
+tool at a time, deterministic TypeScript code accepts or rejects each action,
+and an independent validator decides whether the day has been repaired.
+
+## What Relay includes
+
+- Three built-in demo scenarios
+- Manual schedule creation
+- Read-only Google Calendar import
+- Deterministic schedule analysis and validation
+- OpenAI tool-calling agent with visible retries
+- Before-and-after schedule comparison
+- Replay from recorded tool results without another model call
+- Optional PostHog product analytics
+
+Google Calendar imports timed events from the selected day as fixed meetings.
+Imported meetings cannot be moved, and Relay never writes to Google Calendar.
+Users can add flexible tasks after importing their meetings.
 
 ## Requirements
 
@@ -12,98 +29,107 @@ or rejects the action, and only the validator can approve a repaired workday.
 
 ## Local setup
 
+Install dependencies and create a local environment file:
+
 ```bash
 npm install
 cp .env.example .env.local
 ```
 
-Set `OPENAI_API_KEY` in `.env.local`. `OPENAI_MODEL` is optional and defaults to
-the model shown in `.env.example`. The key is read only by the server-side repair
-route and is never sent to the browser.
+Set at least:
 
-Start development:
+```text
+OPENAI_API_KEY=your_server_side_api_key
+```
+
+Start the application:
 
 ```bash
 npm run dev
 ```
 
-Create and run a production build:
+Open [http://localhost:3000](http://localhost:3000).
+
+## Environment variables
+
+```text
+OPENAI_API_KEY=your_server_side_api_key
+OPENAI_MODEL=gpt-5.6-luna
+
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/google-calendar/callback
+GOOGLE_OAUTH_COOKIE_SECRET=your_long_random_secret
+
+NEXT_PUBLIC_POSTHOG_KEY=your_posthog_project_key
+NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+```
+
+Only `OPENAI_API_KEY` is required for demo and manual repair runs. Google
+variables are required only for Calendar import. PostHog variables are optional.
+
+Keep `.env.local` private. Do not commit API keys, OAuth secrets, cookie secrets,
+or personal PostHog keys.
+
+## Google Calendar setup
+
+1. Enable the Google Calendar API in Google Cloud.
+2. Configure the OAuth consent screen.
+3. Create an OAuth client with application type **Web application**.
+4. Add the scope:
+   `https://www.googleapis.com/auth/calendar.readonly`
+5. Add this authorized redirect URI:
+
+```text
+http://localhost:3000/api/google-calendar/callback
+```
+
+Use the OAuth Web application Client ID, which normally ends in
+`.apps.googleusercontent.com`.
+
+Create the cookie secret locally:
 
 ```bash
+openssl rand -base64 32
+```
+
+Relay stores OAuth state and the short-lived access token in encrypted,
+HTTP-only cookies. The access-token cookie is deleted after the import succeeds
+or fails. All-day events are skipped.
+
+## Commands
+
+```bash
+npm run dev
+npm run typecheck
+npm run lint
+npm test
 npm run build
 npm start
 ```
 
-## Verification
-
-```bash
-npm run typecheck
-npm run lint
-npm test
-```
-
-The automated controller test uses deterministic model decisions and does not
-require an API key. A real `OPENAI_API_KEY` is required to verify a live repair
-from the UI.
-
-## Google Calendar read-only import
-
-Relay can import timed events from the signed-in user's primary Google Calendar
-for one selected day. Imported events become fixed Relay meetings. The import
-does not create, update, or delete Google Calendar events, and all-day events are
-ignored. Demo and manual schedule modes continue to work without Google login.
-
-In Google Cloud:
-
-1. Enable the Google Calendar API.
-2. Configure the OAuth consent screen.
-3. Create an OAuth client with application type **Web application**.
-4. Add the Calendar read-only scope:
-   `https://www.googleapis.com/auth/calendar.readonly`.
-5. Add the appropriate authorized redirect URIs exactly as written:
-
-```text
-http://localhost:3000/api/google-calendar/callback
-https://relay-autonomous-workday.suyashpradhan.chatgpt.site/api/google-calendar/callback
-```
-
-For local development, set:
-
-```text
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/google-calendar/callback
-GOOGLE_OAUTH_COOKIE_SECRET=... # optional but recommended
-```
-
-For the deployed site, use the HTTPS redirect URI above in
-`GOOGLE_REDIRECT_URI`. Generate `GOOGLE_OAUTH_COOKIE_SECRET` as a long random
-value and store it as a secret. Do not commit any real credentials.
-
-`GOOGLE_OAUTH_COOKIE_SECRET` is created by you; Google does not provide it.
-Generate one with `openssl rand -base64 32`. If it is omitted, Relay derives a
-separate cookie-encryption key from `GOOGLE_CLIENT_SECRET`.
-
-If Google shows `Error 401: invalid_client` or “The OAuth client was not found,”
-verify that `GOOGLE_CLIENT_ID` is the OAuth **Web application Client ID**, not
-the Google Cloud project ID. It normally ends in `.apps.googleusercontent.com`.
-Also confirm that the deployed runtime has the current value and that the OAuth
-client has not been deleted.
-
-OAuth state and the short-lived access token are encrypted in HTTP-only cookies.
-They are never available to browser JavaScript. The access-token cookie is
-deleted immediately after the one-day import succeeds or fails.
+`npm test` runs the deterministic tests and a production build. Unit tests use
+mocked model responses and do not consume OpenAI API credits.
 
 ## Architecture
 
-- `app/` — Relay screens and server-side repair API
-- `components/relay/` — presentational workspace, execution, results, and replay UI
-- `lib/scheduling/` — domain types, scenarios, analyzer, tools, and validator
-- `lib/agent/` — OpenAI tool definitions and autonomous controller
-- `lib/ui/` — display-only adapters; no scheduling mutations
-- `tests/` — deterministic controller and rendered application checks
+```text
+Goal
+→ model selects one tool
+→ Zod validates the arguments
+→ deterministic TypeScript executes the tool
+→ the model observes success or rejection
+→ the model chooses the next action
+→ deterministic validation controls completion
+```
 
-Schedules use minutes from midnight internally. The original schedule is cloned
-and preserved; the working schedule changes only when a validated deterministic
-tool succeeds. Replay applies recorded successful schedule states and never
-calls OpenAI.
+- `app/`: application screens and server routes
+- `components/relay/`: schedule, execution, results, and replay UI
+- `lib/scheduling/`: domain types, scenarios, analyzer, tools, and validator
+- `lib/agent/`: OpenAI tool definitions and agent controller
+- `lib/ui/`: display-only adapters and human-friendly copy
+- `tests/`: scheduling, controller, import, and rendered-output checks
+
+Schedules use minutes from midnight internally. Relay preserves the original
+schedule separately and changes the working schedule only after a deterministic
+tool succeeds. Rejected actions never mutate schedule state.
